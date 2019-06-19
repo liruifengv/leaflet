@@ -12,6 +12,55 @@
     #mapDiv {
       height: 100vh;
     }
+
+    .incident {
+      fill: #323c48;
+    }
+    .hover {
+      fill: #1d242f;   
+    }
+    #tooltip {   
+		position: absolute;           
+		text-align: center;
+		padding: 20px;             
+		margin: 10px;
+		font: 12px sans-serif;        
+		background: lightsteelblue;   
+		border: 1px;      
+		border-radius: 2px;           
+		pointer-events: none;         
+	}
+	#tooltip h4{
+		margin:0;
+		font-size:14px;
+	}
+	#tooltip{
+		background:rgba(0,0,0,0.9);
+		border:1px solid grey;
+		border-radius:5px;
+		font-size:12px;
+		width:auto;
+		padding:4px;
+		color:white;
+		opacity:0;
+	}
+	#tooltip table{
+		table-layout:fixed;
+	}
+	#tooltip tr td{
+		padding:0;
+		margin:0;
+	}
+	#tooltip tr td:nth-child(1){
+		width:50px;
+	}
+	#tooltip tr td:nth-child(2){
+		text-align:center;
+	}
+  #plane {
+    z-index: 1000 !important;
+    pointer-events: none
+  }
   </style>
 </head>
 <body>
@@ -19,159 +68,12 @@
 
   </div>
 
-<!-- <script src="https://d3js.org/d3.v5.min.js"></script> -->
-<script src="./js/d3.min.js" charset="utf-8"></script>
-
+<script src="https://d3js.org/d3.v5.min.js"></script>
 <script src="./js/topojson.js" charset="utf-8"></script>
-<script src="./js/flight.min.js" charset="utf-8"></script>
 <script src="./leaflet/leaflet.js" charset="utf-8"></script>
-<script>
-  var cities = [{
-    pos: [39.9, 116.3],
-    name: "Peking",
-    color: "#FFCCCC"
-  }, {
-    pos: [31.2, 121.4],
-    name: "Shanghai",
-    color: "#F5CCFF"
-  }, {
-    pos: [22.2, 114.2],
-    name: "Hongkong",
-    color: "#CCFFFF"
-  }, {
-    pos: [24.9, 121, 5],
-    name: "Taipei",
-    color: "#CCFFD1"
-  }, {
-    pos: [41.9, 12.4],
-    name: "Roma",
-    color: "#42C7FF"
-  }, {
-    pos: [48.8, 2.27],
-    name: "france",
-    color: "#8591FF"
-  }, {
-    pos: [52.5, 13.5],
-    name: "berlin",
-    color: "#E785FF"
-  }, {
-    pos: [51.6, 0],
-    name: "London",
-    color: "#FF85CE"
-  }, {
-    pos: [9, 38.8],
-    name: "Addis Ababa",
-    color: "#DFD362"
-  }, {
-    pos: [-25.7, 28.2],
-    name: "Pretoria",
-    color: "#7BDF62"
-  }, {
-    pos: [-33.85, 151.21],
-    name: "Sydney",
-    color: "#DA9AEB"
-  }, {
-    pos: [40.7, -74.01],
-    name: "New York",
-    color: "#62DFDF"
-  }, {
-    pos: [37.4, -121.88],
-    name: "San Francisco",
-    color: "#EB9A9A"
-  }, {
-    pos: [35.7, 139.1],
-    name: "Tokyo",
-    color: "#85FFFF"
-  }];
- 
-    var mymap = L.map("mapDiv", {
-      center: [33.027088, 109.467773],
-      zoom: 4,
-      center: [33.027088, 109.467773],
-      zoomControl: false,
-      attributionControl: false,
-      minZoom: 1,
-      maxZoom: 18
-    })
-    L.control.zoom({
-        position: "bottomright",
-        zoomInTitle: "放大",
-        zoomOutTitle: "缩小"
-      }).addTo(mymap)
-      L.control.scale({
-        metric: !0,
-        imperial: !1
-      }).addTo(mymap);
+<script src="./js/victor.min.js" charset="utf-8"></script>
+<script src="./js/flight.js" charset="utf-8"></script>
+<script src="./js/index.js" charset="utf-8"></script>
 
-    // d3.json("data/world_map.json")
-    //   .then((data) => {
-    //     var topoData = topojson.feature(data, data.objects.countries);
-    //     console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
-    //     console.log("topoData",topoData);
-    //     console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
-    //     L.geoJSON(topoData, {
-    //       style: {
-    //         color: "#fffd4b",
-    //         opacity: .5,
-    //         weight: 1,
-    //         fillColor: "black",
-    //         fillOpacity: .2
-    //       }
-    //     }).addTo(mymap);
-    //   })
-    d3.json("data/world_map.json", function (data) {
-        var topoData = topojson.feature(data, data.objects.countries);
-        console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
-        console.log("topoData",topoData);
-        console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
-        L.geoJSON(topoData, {
-          style: {
-            color: "#fffd4b",
-            opacity: .5,
-            weight: 1,
-            fillColor: "black",
-            fillOpacity: .2
-          }
-        }).addTo(mymap);
-      })
-      L.marker([30.6268660000, 104.1528940000]).addTo(mymap).bindTooltip("my tooltip text").openTooltip();
-      L.marker([39.92998577808024,116.39564503787867]).addTo(mymap).bindPopup("<b>北京</b>").openPopup();
-
-      var svg = d3.select("#mapDiv").select("svg"),
-        f = (svg.append("g"), []);
-        console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
-        console.log("svg",svg);
-        console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
-      f.push(new Flight(mymap, svg));
-      var a = Math.floor(3 * Math.random()),
-        b = Math.floor(4 + 10 * Math.random());
-      console.log(a + " " + b), f[f.length - 1].setPlaneColor(cities[b].color), f[f.length - 1].setRoadColor(cities[b].color), f[f.length - 1].setBeginColor(cities[a].color), f[f.length - 1].setEndColor(cities[b].color), f[f.length - 1].init({
-        lat: cities[a].pos[0],
-        lng: cities[a].pos[1]
-      }, {
-        lat: cities[b].pos[0],
-        lng: cities[b].pos[1]
-      })
-      // setInterval(function () {
-        // if (f.length < 6 && Math.random() < .2) {
-          // f.push(new Flight(mymap, d));
-          // var plane1 = new Flight(mymap, svg);
-          // console.log(plane1)
-          // // var a = Math.floor(3 * Math.random()),
-          // //   b = Math.floor(4 + 10 * Math.random());
-          // plane1.setPlaneColor('#FF0000')
-          // plane1.setRoadColor('#FF0000')
-          // plane1.setBeginColor('#108ee9')
-          // plane1.setEndColor('#108ee9')
-          // plane1.init({
-          //   lat: 31.2,
-          //   lng: 121.4
-          // }, {
-          //   lat: 39.92,
-          //   lng: 116.46
-          // })
-        // }
-      // }, 10000)
-</script>
 </body>
 </html>
