@@ -1,3 +1,4 @@
+  var planeInterval;
   var style = {
     color: "#586a77",
     opacity: 1,
@@ -32,6 +33,7 @@
   var flightArr = []; // 存放飞机的数组
   function FlightState() { // 更新飞机的状态
     for (var a = flightArr.length - 1; a >= 0; a--) {
+      flightArr[a].isEnd() ? clearInterval(planeInterval) : ''
       flightArr[a].update()
       flightArr[a].render()
       // flightArr[a].isEnd() ? flightArr[a].isCleaning || (flightArr[a].isCleaning = !0, flightArr[a].delete(), flightArr.splice(a, 1)) : (flightArr[a].update(), flightArr[a].render())
@@ -76,22 +78,29 @@
 
       // var plane1 = new Flight(mymap, svg);
       // console.log(plane1)
-      flightArr[flightArr.length - 1].setPlaneColor('#FF0000')
-      flightArr[flightArr.length - 1].setRoadColor('#42b983')
-      flightArr[flightArr.length - 1].setBeginColor('#108ee9')
-      flightArr[flightArr.length - 1].setEndColor('#108ee9')
+      flightArr[flightArr.length - 1].setPlaneColor('#FFCCCC')
+      flightArr[flightArr.length - 1].setRoadColor('#85FFFF')
+      flightArr[flightArr.length - 1].setBeginColor('#62DFDF')
+      flightArr[flightArr.length - 1].setEndColor('#62DFDF')
       flightArr[flightArr.length - 1].init({
-        lat: 31.2,
-        lng: 121.4
+        lat: 30.655822,
+        lng: 104.081534 
       }, {
         lat: 39.92,
         lng: 116.46
       })
-      setInterval(function () {
+      planeInterval = setInterval(function () {
         FlightState()
-      }, 100)
-            
+      }, 100)            
+      var latlngs = [
+        [30.655822, 104.081534],
+        // [31.2, 121.4],
+        [39.92, 116.46]
+      ];
+      var polyline = L.polyline(latlngs, {color: '#fff',weight:1}).addTo(mymap);
+      var polyline = L.polyline(latlngs, {color: '#FF0000',weight:1,dashArray: '10 10'}).addTo(mymap);
     })
+
   // L.marker([30.6268660000, 104.1528940000]).addTo(mymap).bindTooltip("my tooltip text").openTooltip();
   // L.marker([31.2, 121.4]).addTo(mymap).bindPopup("<b>上海</b>").openPopup();
   // L.marker([39.92, 116.46]).addTo(mymap).bindPopup("<b>北京</b>").openPopup();

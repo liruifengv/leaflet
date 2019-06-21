@@ -12,12 +12,14 @@ function Flight(map, svg) {
     }
     this.bp_px = null
     this.ep_px = null
+    this.mp_px = null
     this.group = null
     this.bp_circle = null // 起点圆形标记
     this.ep_circle = null // 终点圆形标记
+    this.mid_circle = null // 中转点圆形标记
     this.radius = 6 * this.curZoom / 3 // 根据缩放级别计算标记的大小
     this.plane = null
-    this.pos_plane = { // 飞机位置
+    this.pos_plane = { // 飞机位置（像素坐标）
         x: 0,
         y: 0
     }
@@ -29,7 +31,6 @@ function Flight(map, svg) {
         lat: 0,
         lng: 0
     }
-    this.mp_px = null
     this.road = null
     this.road_points = null
     this.group_road = null
@@ -40,45 +41,102 @@ function Flight(map, svg) {
     this.beginColor = "blue"  // 起点颜色
     this.endColor = "red"     // 终点颜色
     this.isCleaning = false
+    /**
+     * 飞机初始化
+     *
+     * @param {*} a 起点经纬度坐标
+     * @param {*} b 终点经纬度坐标
+     */
     this.init = function (a, b) {
-      this.beginPoint.lat = a.lat
-      this.beginPoint.lng = a.lng
-      this.bp_px = this.map.latLngToLayerPoint([a.lat, a.lng])
-      this.endPoint.lat = b.lat
-      this.endPoint.lng = b.lng
+      this.beginPoint.lat = a.lat // 起点经度
+      this.beginPoint.lng = a.lng // 起点纬度
+      this.bp_px = this.map.latLngToLayerPoint([a.lat, a.lng]) // 把地理坐标转化为像素坐标
+      this.endPoint.lat = b.lat // 终点经度
+      this.endPoint.lng = b.lng // 终点纬度
       this.ep_px = this.map.latLngToLayerPoint([b.lat, b.lng])
+      // 把起点像素坐标赋值给飞机像素坐标位置
       this.pos_plane.x = this.bp_px.x
       this.pos_plane.y = this.bp_px.y;
-      var c = Math.random() < .5 ? -1 : 1,
-        d = (a.lat + b.lat) / 2,
-        e = (a.lng + b.lng) / 2;
-      this.midPoint.lat = (a.lat + b.lat) / 2 + Math.random() * d * .25 * c
-      this.midPoint.lng = (a.lng + b.lng) / 2 + Math.random() * e * .25 * c
+
+      var c = Math.random() < .5 ? -1 : 1;
+      var d = (a.lat + b.lat) / 2; // 起点经度 + 终点经度 / 2
+      var e = (a.lng + b.lng) / 2; // 起点纬度 + 终点纬度 / 2
+
+      // 随机得到中转坐标
+      // this.midPoint.lat = (a.lat + b.lat) / 2 + Math.random() * d * .25 * c
+      // this.midPoint.lng = (a.lng + b.lng) / 2 + Math.random() * e * .25 * c
+      this.midPoint.lat = 31.2 // 上海
+      this.midPoint.lng = 121.4
+      
+      // 把中转坐标转化为像素坐标
       this.mp_px = this.map.latLngToLayerPoint([this.midPoint.lat, this.midPoint.lng])
+      console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+      console.log("beginPoint",this.beginPoint);
+      console.log("bp_px",this.bp_px);
+      console.log("endPoint",this.endPoint);
+      console.log("ep_px",this.ep_px);
+      console.log("midPoint",this.midPoint);
+      console.log("mp_px",this.mp_px);
+      console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
       this.group = this.svg.append("g")
+
+      // 航线数组
       this.road_points = [
         [this.bp_px.x, this.bp_px.y],
-        [this.mp_px.x, this.mp_px.y],
+        // [this.mp_px.x, this.mp_px.y],
         [this.ep_px.x, this.ep_px.y]
-      ], this.clipPath = this.group.append("defs").append("clipPath").attr("id", "aaa").attr("clip-rule", "evenodd");
-      var f = this.getClipRect(this.bp_px, this.mp_px, this.pos_plane);
-      this.clipPath_rect = this.clipPath.append("rect").attr("x", f[0]).attr("y", f[1]).attr("width", f[2]).attr("height", f[3]);this.group_road = this.group.append("g");
-      this.group_road.attr("clip-path", "url(#aaa)");
+      ]
+      
+      this.clipPath = this.group.append("defs").append("clipPath").attr("id", "aaa").attr("clip-rule", "evenodd");
 
-      this.road = this.group_road.append("path").datum(this.road_points).attr("stroke", this.roadColor).attr("stroke-width", 1.5).attr("stroke-dasharray", "10 5").attr("fill", "none").attr("d", d3.line().curve(d3.curveBundle.beta(.5)));
+      var clipRectArr = this.getClipRect(this.bp_px, this.mp_px, this.pos_plane);
+      console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+      console.log("clipRectArr", clipRectArr);
+      console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+      // 矩形
+      this.clipPath_rect = this.clipPath.append("rect").attr("x", clipRectArr[0]).attr("y", clipRectArr[1]).attr("width", clipRectArr[2]).attr("height", clipRectArr[3]);
+
+      // 航线 group
+      this.group_road = this.group.append("g").attr("class", "road");
+      this.group_road.attr("clip-path", "url(#aaa)");
+      // 绘制航线
+      this.road = this.group_road.append("path")
+        .datum(this.road_points) // 航线数组数据
+        .attr("stroke", this.roadColor)
+        .attr("stroke-width", 1.5)
+        // .attr("stroke-dasharray", "10 5") // 虚线
+        .attr("fill", "none")
+        .attr("d", d3.line().curve(d3.curveBundle.beta(.5))); // 曲线  // 矫正系数
+
       this.bp_circle = this.group.append("circle").attr("fill", this.beginColor); // 起点标记
       this.ep_circle = this.group.append("circle").attr("fill", this.endColor); // 终点标记
-      console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
-      console.log("this.svg",this.svg);
-      console.log("this.group",this.group);
-      console.log("this.group_road",this.group_road);
-      console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+      this.mid_circle = this.group.append("circle").attr("fill", this.endColor); // 中转标记
+      
       this.load_plane()
     }
-    this.getClipRect = function (a, b, c) {
-        var d, e, f, g, h, i;
-        return d = Math.min(a.x, c.x), e = Math.min(a.y, c.y), f = Math.max(a.x, c.x), g = Math.max(a.y, c.y), Math.abs(this.ep_px.x - this.bp_px.x) >= Math.abs(this.ep_px.y - this.bp_px.y) ? (h = 0, i = 800) : (h = 800, i = 0), [d - h, e - i, f - d + 2 * h, g - e + 2 * i]
+    /**
+     * 获取航线飞行的区域
+     *
+     * @param {*} bp_px // 起点的像素坐标
+     * @param {*} mp_px // 中转点的像素坐标
+     * @param {*} pos_plane // 飞机位置的像素坐标
+     * @returns [矩形横坐标，矩形纵坐标，矩形宽度，矩形高度]
+     */
+    this.getClipRect = function (bp_px, mp_px, pos_plane) {
+        var minX, minY, maxX, maxY, h, i;
+        minX = Math.min(bp_px.x, pos_plane.x); // 起点横坐标和飞机横坐标求最小值
+        minY = Math.min(bp_px.y, pos_plane.y); // 起点纵坐标和飞机纵坐标求最小值
+        maxX = Math.max(bp_px.x, pos_plane.x);  // 起点横坐标和飞机横坐标求最大值
+        maxY = Math.max(bp_px.y, pos_plane.y);  // 起点纵坐标和飞机纵坐标求最大值
+        // 终点横坐标 - 起点横坐标的绝对值 是否大于等于  终点纵坐标 - 起点纵坐标的绝对值
+        Math.abs(this.ep_px.x - this.bp_px.x) >= Math.abs(this.ep_px.y - this.bp_px.y) 
+        ? (h = 0, i = 800) : (h = 800, i = 0);
+        return [minX - h, minY - i, maxX - minX + 2 * h, maxY - minY + 2 * i]
     }
+    /**
+     * 绘制飞机
+     *
+     */
     this.load_plane = function () {
 
         var a = this.w_plane,
@@ -87,46 +145,81 @@ function Flight(map, svg) {
           d = this.pos_plane.y,
           e = this.spos + 0.01,
 
-          f = this.road.node().getTotalLength(),
-          g = this.road.node().getPointAtLength(e * f),
-          h = Victor(g.x - c.x, g.y - c.y).angleDeg();
+          f = this.road.node().getTotalLength(), // 以用户坐标返回计算后的路径长度
+          g = this.road.node().getPointAtLength(e * f), // 返回以用户坐标计算的距离起点distance单位的点，包含x和y属性
+          // h = Victor(g.x - c.x, g.y - c.y).angleDeg();
+          h = Victor(g.x - c, g.y - d).angleDeg(); // 生成角度
         this.rot = h + 45;
         this.plane = this.group.append("g").attr("id", "plane").attr("transform", function () {
+          
             var e = "translate(" + c + "," + d + ")", f = "rotate(" + h + ")", g = "scale(0)", i = "translate(" + a / -2 + "," + b / -2 + ")";
             return e + f + g + i
         }).attr("fill", this.planeColor), this.plane.append("path").attr("d", this.d_plane)
-        d3.select("#plane").data(planeData)
+        d3.select("#plane").data(planeData) // 绑定事件
         .on("mouseover", mouseOver).on("mouseout", mouseOut);
-        console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
-        console.log("TODO",d3.select("#plane"));
-        console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
     }
+    /**
+     *
+     * 渲染
+     */
     this.render = function () {
         var a = this.getClipRect(this.bp_px, this.mp_px, this.pos_plane);
-        this.clipPath_rect.attr("x", a[0]).attr("y", a[1]).attr("width", a[2]).attr("height", a[3]), this.road_points = [[this.bp_px.x, this.bp_px.y], [this.mp_px.x, this.mp_px.y], [this.ep_px.x, this.ep_px.y]], this.road.datum(this.road_points).attr("d", d3.line().curve(d3.curveBundle.beta(.5))), this.bp_circle.attr("cx", this.bp_px.x).attr("cy", this.bp_px.y).attr("r", this.radius), this.ep_circle.attr("cx", this.ep_px.x).attr("cy", this.ep_px.y).attr("r", this.radius);
-        var b = this.w_plane, c = this.h_plane, d = this.pos_plane.x, e = this.pos_plane.y, f = this.rot, g = this.spos, h = d3.scaleLinear().domain([0, .9, 1]).range([.3, .5, 0]);
-        this.plane.attr("transform", function () {
-            var a = "translate(" + d + "," + e + ")", i = "rotate(" + f + ")", j = "scale(" + h(g) + ")", k = "translate(" + b / -2 + "," + c / -2 + ")";
+        this.clipPath_rect.attr("x", a[0]).attr("y", a[1]).attr("width", a[2]).attr("height", a[3]);
+        // 航线数组
+        this.road_points = [
+          [this.bp_px.x, this.bp_px.y],
+          // [this.mp_px.x, this.mp_px.y],
+          [this.ep_px.x, this.ep_px.y]
+        ]
+        this.road.datum(this.road_points).attr("d", d3.line().curve(d3.curveBundle.beta(.5)));
+
+        // 绘制起点终点标记
+        this.bp_circle.attr("cx", this.bp_px.x).attr("cy", this.bp_px.y).attr("r", this.radius);
+        this.ep_circle.attr("cx", this.ep_px.x).attr("cy", this.ep_px.y).attr("r", this.radius);
+        this.mid_circle.attr("cx", this.mp_px.x).attr("cy", this.mp_px.y).attr("r", this.radius);
+
+        var b = this.w_plane, 
+          c = this.h_plane, 
+          d = this.pos_plane.x, 
+          e = this.pos_plane.y, 
+          f = this.rot, 
+          g = this.spos, 
+          h = d3.scaleLinear().domain([0, .9, 1]).range([.3, .5, 0]);
+          this.plane.attr("transform", function () {
+            // var a = "translate(" + d + "," + e + ")", i = "rotate(" + f + ")", j = "scale(" + h(g) + ")", k = "translate(" + b / -2 + "," + c / -2 + ")";
+            var a = "translate(" + d + "," + e + ")", i = "rotate(" + f + ")", j = "scale(0.4)", k = "translate(" + b / -2 + "," + c / -2 + ")";
             return a + i + j + k
         })
     }
+    /**
+     * 更新飞机状态
+     *
+     */
     this.update = function () {
         this.curZoom = this.map.getZoom();
         this.radius = 6 * this.curZoom / 3;
         this.bp_px = this.map.latLngToLayerPoint([this.beginPoint.lat, this.beginPoint.lng]);
         this.ep_px = this.map.latLngToLayerPoint([this.endPoint.lat, this.endPoint.lng]);
         this.mp_px = this.map.latLngToLayerPoint([this.midPoint.lat, this.midPoint.lng]);
-        this.road_points = [[this.bp_px.x, this.bp_px.y], [this.mp_px.x, this.mp_px.y], [this.ep_px.x, this.ep_px.y]];
+
+        this.road_points = [
+          [this.bp_px.x, this.bp_px.y],
+          // [this.mp_px.x, this.mp_px.y],
+          [this.ep_px.x, this.ep_px.y]
+        ]
         this.road.datum(this.road_points).attr("d", d3.line().curve(d3.curveBundle.beta(.5)));
+
         this.spos = this.spos <= 1 ? this.spos + .01 : this.spos;
         var a = this.road.node().getTotalLength(), 
             b = this.road.node().getPointAtLength(this.spos * a);
-        this.pos_plane.x = b.x;
+
+        this.pos_plane.x = b.x; // 更新飞机位置
         this.pos_plane.y = b.y;
+
         var c = this.spos <= 1 ? this.spos + .01 : this.spos, 
             d = this.road.node().getPointAtLength(c * a), 
             e = Victor(d.x - this.pos_plane.x, d.y - this.pos_plane.y).angleDeg();
-        this.rot = e + 45
+        this.rot = this.isEnd() ? 0 : e + 45
     }
     this.setPlaneColor = function (a) {
         this.planeColor = a;
@@ -145,8 +238,12 @@ function Flight(map, svg) {
         this.ep_circle && this.ep_circle.attr("fill", this.endColor)
     }
     this.isEnd = function () {
-        return Math.abs(this.spos - 1) < 1e-4
+        return Math.abs(this.spos - 1) < 1e-4 // 0.0001
     }
+    /**
+     *清楚起点终点标记和航线
+     *
+     */
     this.delete = function () {
         // this.bp_circle.transition().duration(500).style("opacity", "0.0").attr("r", 0).remove();
         // this.road.transition().duration(1e3).style("opacity", "0.0").attr("stroke-width", 0).remove();
@@ -166,9 +263,6 @@ function tooltipHtml(d){	/* function to create html content string in tooltip di
 }
 
 function mouseOver(d){
-  console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
-  console.log("AAAAAAAA");
-  console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
   d3.select("#tooltip").transition().duration(200).style("opacity", .9);
   d3.select("#tooltip").html(tooltipHtml(d))
     .style("left", (d3.event.pageX) + "px")
