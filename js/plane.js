@@ -45,8 +45,23 @@ function Flight(map, svg) {
   this._latlngs = []
   this._durations
   this._autostart = false
-  this._currentIndex = 0
+  this.loop =false
   this.planeInterval = null
+  // 2019-06-25
+  this._currentDuration = 0
+  this._currentIndex = 0
+  this.notStartedState = 0
+  this.endedState = 1
+  this.pausedState = 2
+  this.runState = 3
+  this._state = 0
+  this._startTime = 0
+  this._startTimeStamp = 0  // timestamp given by requestAnimFrame
+  this._pauseStartTime = 0
+  this._animId = 0
+  this._animRequested = false;
+  this._currentLine = []
+  this._stations = {}
 
   /**
    * 飞机初始化
@@ -60,12 +75,19 @@ function Flight(map, svg) {
     this._latlngs = latlngs.map(function(e, index) {
       return L.latLng(e);
     });
-    this._durations = durations;
+
+    if (durations instanceof Array) {
+      this._durations = durations;
+    } else {
+        this._durations = this._createDurations(this._latlngs, durations);
+    }
+
     this.planeColor = options.planeColor;
     this.roadColor = options.roadColor;
     this.beginColor = options.beginColor;
     this.endColor = options.endColor;
     this._autostart = options.autostart;
+    this.loop = options.loop;
     console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
     console.log("_latlngs", this._latlngs);
     console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
@@ -75,74 +97,41 @@ function Flight(map, svg) {
     this.beginPoint.lat = this._latlngs[0].lat // 起点经度
     this.beginPoint.lng = this._latlngs[0].lng // 起点纬度
     this.bp_px = this.map.latLngToLayerPoint([this._latlngs[0].lat, this._latlngs[0].lng]) // 把地理坐标转化为像素坐标
-    this.endPoint.lat = this._latlngs[1].lat // 终点经度
-    this.endPoint.lng = this._latlngs[1].lng // 终点纬度
-    this.ep_px = this.map.latLngToLayerPoint([this._latlngs[1].lat, this._latlngs[1].lng])
     // 把起点像素坐标赋值给飞机像素坐标位置
     this.pos_plane.x = this.bp_px.x
     this.pos_plane.y = this.bp_px.y;
-
-    // var c = Math.random() < .5 ? -1 : 1;
-    // var d = (a.lat + b.lat) / 2; // 起点经度 + 终点经度 / 2
-    // var e = (a.lng + b.lng) / 2; // 起点纬度 + 终点纬度 / 2
-
-    // 随机得到中转坐标
-    // this.midPoint.lat = (a.lat + b.lat) / 2 + Math.random() * d * .25 * c
-    // this.midPoint.lng = (a.lng + b.lng) / 2 + Math.random() * e * .25 * c
-    this.midPoint.lat = 31.2 // 上海
-    this.midPoint.lng = 121.4
-    
-    // 把中转坐标转化为像素坐标
-    this.mp_px = this.map.latLngToLayerPoint([this.midPoint.lat, this.midPoint.lng])
-    console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
-    console.log("beginPoint",this.beginPoint);
-    console.log("bp_px",this.bp_px);
-    console.log("endPoint",this.endPoint);
-    console.log("ep_px",this.ep_px);
-    console.log("midPoint",this.midPoint);
-    console.log("mp_px",this.mp_px);
-    console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
     this.group = this.svg.append("g")
 
-    // 航线数组
-    this.road_points = [
-      [this.bp_px.x, this.bp_px.y],
-      // [this.mp_px.x, this.mp_px.y],
-      [this.ep_px.x, this.ep_px.y]
-    ]
-    
-    this.clipPath = this.group.append("defs").append("clipPath").attr("id", "aaa").attr("clip-rule", "evenodd");
-
-    var clipRectArr = this.getClipRect(this.bp_px, this.mp_px, this.pos_plane);
-    console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
-    console.log("clipRectArr", clipRectArr);
-    console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
-    // 矩形
-    this.clipPath_rect = this.clipPath.append("rect").attr("x", clipRectArr[0]).attr("y", clipRectArr[1]).attr("width", clipRectArr[2]).attr("height", clipRectArr[3]);
-
-    // 航线 group
-    this.group_road = this.group.append("g").attr("class", "road");
-    this.group_road.attr("clip-path", "url(#aaa)");
-    // 绘制航线
-    this.road = this.group_road.append("path")
-      .datum(this.road_points) // 航线数组数据
-      .attr("stroke", this.roadColor)
-      .attr("stroke-width", 1.5)
-      // .attr("stroke-dasharray", "10 5") // 虚线
-      .attr("fill", "none")
-      .attr("d", d3.line().curve(d3.curveBundle.beta(.5))); // 曲线  // 矫正系数
-
-    this.bp_circle = this.group.append("circle").attr("fill", this.beginColor); // 起点标记
-    this.ep_circle = this.group.append("circle").attr("fill", this.endColor); // 终点标记
-    // this.mid_circle = this.group.append("circle").attr("fill", this.endColor); // 中转标记
+    var self = this
+    this._latlngs.map(function (point) {
+      var point_px = self.map.latLngToLayerPoint([point.lat, point.lng])
+      self.group.append("circle").attr("fill", self.beginColor).attr("cx", point_px.x).attr("cy", point_px.y).attr("r", self.radius);
+    })
     
     this.load_plane()
     if(this._autostart) {
-      var self = this
-      planeInterval = setInterval(function () {
-        self.update()
-        self.render()
-      },100)
+      this.start()
+      this.map.on("zoomend", function () {
+        // self._latlngs.map(function (point) {
+        //   var point_px = self.map.latLngToLayerPoint([point.lat, point.lng])
+        //   self.group.append("circle").attr("fill", self.beginColor).attr("cx", point_px.x).attr("cy", point_px.y).attr("r", self.radius);
+        // })
+        if(!self.isStarted) {
+          var plane_px = self.map.latLngToLayerPoint([self._latlngs[0].lat, self._latlngs[0].lng]) // 把地理坐标转化为像素坐标
+          self.pos_plane = plane_px
+          self.plane.attr("transform", function () {
+              var a = "translate(" + plane_px.x + "," + plane_px.y + ")", j = "scale(0.4)";
+              return a + j;
+          })
+        } else if (self.isEnded) {
+          var plane_px = self.map.latLngToLayerPoint([self._latlngs[self._latlngs.length-1].lat, self._latlngs[self._latlngs.length-1].lng]) // 把地理坐标转化为像素坐标
+          self.pos_plane = plane_px
+          self.plane.attr("transform", function () {
+              var a = "translate(" + plane_px.x + "," + plane_px.y + ")", j = "scale(0.4)";
+              return a + j;
+          })
+        }
+      })
     }
   }
   /**
@@ -169,26 +158,21 @@ function Flight(map, svg) {
    *
    */
   this.load_plane = function () {
-
-      var a = this.w_plane,
-        b = this.h_plane,
-        c = this.pos_plane.x,
-        d = this.pos_plane.y,
-        e = this.spos + 0.01,
-
-        f = this.road.node().getTotalLength(), // 以用户坐标返回计算后的路径长度
-        g = this.road.node().getPointAtLength(e * f), // 返回以用户坐标计算的距离起点distance单位的点，包含x和y属性
-        // h = Victor(g.x - c.x, g.y - c.y).angleDeg();
-        h = Victor(g.x - c, g.y - d).angleDeg(); // 生成角度
-      this.rot = h + 45;
+      var self = this
       this.plane = this.group.append("g").attr("id", "plane").attr("transform", function () {
         
-          var e = "translate(" + c + "," + d + ")", f = "rotate(" + h + ")", g = "scale(0)", i = "translate(" + a / -2 + "," + b / -2 + ")";
-          return e + f + g + i
+        var a = "translate(" + self.pos_plane.x + "," + self.pos_plane.y + ")", j = "scale(0.4)";
+        return a + j;
       }).attr("fill", this.planeColor), this.plane.append("path").attr("d", this.d_plane)
       d3.select("#plane").data(planeData) // 绑定事件
       .on("mouseover", mouseOver).on("mouseout", mouseOut);
-      this.render()
+      d3.select("#plane").on("click", function () {
+        if(self.isPaused()) {
+          self.resume()
+        } else {
+          self.pause()
+        }
+      });
   }
   /**
    *
@@ -200,15 +184,10 @@ function Flight(map, svg) {
       // 航线数组
       this.road_points = [
         [this.bp_px.x, this.bp_px.y],
-        // [this.mp_px.x, this.mp_px.y],
         [this.ep_px.x, this.ep_px.y]
       ]
       this.road.datum(this.road_points).attr("d", d3.line().curve(d3.curveBundle.beta(.5)));
 
-      // 绘制起点终点标记
-      this.bp_circle.attr("cx", this.bp_px.x).attr("cy", this.bp_px.y).attr("r", this.radius);
-      this.ep_circle.attr("cx", this.ep_px.x).attr("cy", this.ep_px.y).attr("r", this.radius);
-      // this.mid_circle.attr("cx", this.mp_px.x).attr("cy", this.mp_px.y).attr("r", this.radius);
 
       var b = this.w_plane, 
         c = this.h_plane, 
@@ -287,6 +266,234 @@ function Flight(map, svg) {
       // this.ep_circle.transition().duration(1500).style("opacity", "0.0").attr("r", 0).remove();
       // this.group.transition().delay(1500).style("opacity", "0.0").remove()
   }
+  // 2019-06-25
+  this.isRunning =function () {
+    return this._state === this.runState;
+  }
+
+  this.isEnded = function () {
+    return this._state === this.endedState;
+  }
+
+  this.isStarted = function () {
+    return this._state !== this.notStartedState;
+  }
+
+  this.isPaused = function () {
+    return this._state === this.pausedState;
+  }
+  // 开始
+  this.start = function () {
+    if (this.isRunning()) {
+        return;
+    }
+
+    if (this.isPaused()) {
+        this.resume();
+    } else {
+        this._loadLine(0);
+        this._startAnimation();
+    }
+  }
+  this.pause = function () {
+    if (! this.isRunning()) {
+        return;
+    }
+    console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+    console.log("Pause");
+    console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+    this._pauseStartTime = Date.now();
+    this._state = this.pausedState;
+    this._stopAnimation();
+    this._updatePosition();
+  }
+  // 继续
+  this.resume = function () {
+    if (! this.isPaused()) {
+        return;
+    }
+    // update the current line
+    var latlng = this.map.layerPointToLatLng(this.pos_plane)
+    console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+    console.log("latlng",latlng);
+    console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+
+    this._currentLine[0] = latlng;
+    this._currentDuration -= (this._pauseStartTime - this._startTime);
+    this._startAnimation();
+  }
+  this._loadLine = function (index) {
+    this._currentIndex = index;
+    this._currentDuration = this._durations[index];
+    this._currentLine = this._latlngs.slice(index, index + 2);
+  }
+  this._startAnimation = function () {
+    this._state = this.runState;
+    this._animId = L.Util.requestAnimFrame(function(timestamp) {
+        this._startTime = Date.now();
+        this._startTimeStamp = timestamp;
+        this._animate(timestamp);
+    }, this, true);
+    this._animRequested = true;
+  }
+
+  this._animate = function(timestamp, noRequestAnim) {
+    this._animRequested = false;
+
+    // find the next line and compute the new elapsedTime
+    var elapsedTime = this._updateLine(timestamp);
+
+    if (this.isEnded()) {
+        // no need to animate
+        return;
+    }
+
+    if (elapsedTime != null) {
+        // compute the position
+        var p = this._interpolatePosition(this._currentLine[0],
+            this._currentLine[1],
+            this._currentDuration,
+            elapsedTime);
+            var plane_px = this.map.latLngToLayerPoint([p.lat, p.lng]) // 把地理坐标转化为像素坐标
+            this.pos_plane = plane_px
+        // console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+        // console.log("_currentDuration",this._currentDuration);
+        // console.log("_currentLine",this._currentLine[1]);
+        // console.log("p",p);
+        // console.log("plane_px",plane_px);
+        // console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+        this.plane.attr("transform", function () {
+          // var a = "translate(" + d + "," + e + ")", i = "rotate(" + f + ")", j = "scale(" + h(g) + ")", k = "translate(" + b / -2 + "," + c / -2 + ")";
+          var a = "translate(" + plane_px.x + "," + plane_px.y + ")", j = "scale(0.4)";
+          return a + j;
+      })
+        // this.setLatLng(p);
+    }
+
+    if (! noRequestAnim) {
+        this._animId = L.Util.requestAnimFrame(this._animate, this, false);
+        this._animRequested = true;
+    }
+  }
+
+  this._interpolatePosition = function(p1, p2, duration, t) {
+    var k = t/duration;
+    k = (k > 0) ? k : 0;
+    k = (k > 1) ? 1 : k;
+    return L.latLng(p1.lat + k * (p2.lat - p1.lat),
+        p1.lng + k * (p2.lng - p1.lng));
+  }
+
+  this._updateLine = function(timestamp) {
+    // time elapsed since the last latlng
+    var elapsedTime = timestamp - this._startTimeStamp;
+
+    // not enough time to update the line
+    if (elapsedTime <= this._currentDuration) {
+        return elapsedTime;
+    }
+
+    var lineIndex = this._currentIndex;
+    var lineDuration = this._currentDuration;
+    var stationDuration;
+
+    while (elapsedTime > lineDuration) {
+      console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+      console.log("Arrived");
+      console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+        // substract time of the current line
+        elapsedTime -= lineDuration;
+        stationDuration = this._stations[lineIndex + 1];
+
+        // test if there is a station at the end of the line
+        if (stationDuration !== undefined) {
+            if (elapsedTime < stationDuration) {
+                // this.setLatLng(this._latlngs[lineIndex + 1]);
+                return null;
+            }
+            elapsedTime -= stationDuration;
+        }
+
+        lineIndex++;
+
+        // test if we have reached the end of the polyline
+        if (lineIndex >= this._latlngs.length - 1) {
+
+            if (this.loop) {
+                lineIndex = 0;
+            } else {
+                // place the marker at the end, else it would be at
+                // the last position
+                // this.setLatLng(this._latlngs[this._latlngs.length - 1]);
+                this.stop(elapsedTime);
+                return null;
+            }
+        }
+        lineDuration = this._durations[lineIndex];
+    }
+
+    this._loadLine(lineIndex);
+    this._startTimeStamp = timestamp - elapsedTime;
+    this._startTime = Date.now() - elapsedTime;
+    return elapsedTime;
+  }
+
+  this._createDurations = function (latlngs, duration) {
+    var lastIndex = latlngs.length - 1;
+    var distances = [];
+    var totalDistance = 0;
+    var distance = 0;
+
+    // compute array of distances between points
+    for (var i = 0; i < lastIndex; i++) {
+        distance = latlngs[i + 1].distanceTo(latlngs[i]);
+        distances.push(distance);
+        totalDistance += distance;
+    }
+
+    var ratioDuration = duration / totalDistance;
+
+    var durations = [];
+    for (i = 0; i < distances.length; i++) {
+        durations.push(distances[i] * ratioDuration);
+    }
+
+    return durations;
+  }
+
+  this.stop = function (elapsedTime) {
+    if (this.isEnded()) {
+        return;
+    }
+
+    this._stopAnimation();
+
+    if (typeof(elapsedTime) === 'undefined') {
+        // user call
+        elapsedTime = 0;
+        this._updatePosition();
+    }
+
+    this._state = this.endedState;
+  }
+
+  this._stopAnimation = function () {
+    console.log("■■■■■■■■■■■■■■"+this._animRequested+"■■■■■■■■■■■■■■■■■■■■■■");
+
+    console.log("END");
+
+    if (this._animRequested) {
+      console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+        L.Util.cancelAnimFrame(this._animId);
+        this._animRequested = false;
+    }
+  }
+
+  this._updatePosition = function() {
+    var elapsedTime = Date.now() - this._startTime;
+    this._animate(this._startTimeStamp + elapsedTime, true);
+  }
+
   this.d_plane = "M59.79,12.92C62.42,9.4,64,5.75,64,3.15a3.62,3.62,0,0,0-.49-2,1.6,1.6,0,0,0-.29-.37,1.68,1.68,0,0,0-.34-.27,3.56,3.56,0,0,0-2-.51c-2.6,0-6.25,1.58-9.77,4.21-2.84,2.13-5.69,5.12-9.62,9.27L39.34,15.7l-7.62-2.28,0,0a1.71,1.71,0,0,0,0-2.41L30.36,9.61a1.71,1.71,0,0,0-1.21-.5,1.68,1.68,0,0,0-1.21.5l-2.06,2.06-1.09-.33a1.71,1.71,0,0,0-.14-2.25L23.27,7.7a1.71,1.71,0,0,0-1.21-.5,1.67,1.67,0,0,0-1.2.5L19,9.59,11.21,7.27a1.94,1.94,0,0,0-.55-.08,2.05,2.05,0,0,0-1.43.58L6.5,10.5A1.61,1.61,0,0,0,6,11.62,1.56,1.56,0,0,0,6.85,13l16.3,9.11a2.84,2.84,0,0,1,.4.3l4.65,4.65C23.85,31.66,20,36.09,17,40L16.15,41,3.54,39.86H3.32a2.33,2.33,0,0,0-1.56.65L.49,41.76A1.58,1.58,0,0,0,0,42.89a1.55,1.55,0,0,0,.92,1.43l8.87,4.21a2.07,2.07,0,0,1,.34.24l.74.73a5.38,5.38,0,0,0-.35,1.71,2.24,2.24,0,0,0,.62,1.63l0,0h0a2.25,2.25,0,0,0,1.63.61,5.43,5.43,0,0,0,1.69-.35l.75.75a2,2,0,0,1,.23.33l4.2,8.85a1.57,1.57,0,0,0,1.41.93h0a1.58,1.58,0,0,0,1.12-.47l1.3-1.31a2.32,2.32,0,0,0,.62-1.56c0-.07,0-.13,0-.16L23,47.85,24,47c3.86-3,8.3-6.9,12.87-11.24l4.65,4.66a2.49,2.49,0,0,1,.3.4L51,57.13a1.58,1.58,0,0,0,2.54.37l2.74-2.74a2.08,2.08,0,0,0,.56-1.43,2,2,0,0,0-.07-.54L54.41,45l1.89-1.89a1.71,1.71,0,0,0,0-2.41l-1.39-1.38a1.71,1.71,0,0,0-2.25-.14l-.32-1.09,2.06-2.06a1.72,1.72,0,0,0,.5-1.21,1.69,1.69,0,0,0-.5-1.2L53,32.27a1.71,1.71,0,0,0-2.42,0h0L48.3,24.65l2.25-2.14C54.68,18.59,57.67,15.76,59.79,12.92Z"
 }
 

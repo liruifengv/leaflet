@@ -75,7 +75,7 @@ d3.json("data/geojson/world.json")
     }).addTo(mymap);
     var svg = d3.select("#mapDiv").select("svg");
     
-    mymap.on("zoomend", FlightState)
+    // mymap.on("zoomend", FlightState)
 
     // flightArr.push(new Flight(mymap, svg));
 
@@ -110,7 +110,7 @@ d3.json("data/geojson/world.json")
       endColor: '#62DFDF',
       autostart: true
     }
-    plane1.init(latlngs,2000,options)
+    plane1.init(latlngs,10000,options)
   })
 
 // L.marker([30.6268660000, 104.1528940000]).addTo(mymap).bindTooltip("my tooltip text").openTooltip();
