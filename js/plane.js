@@ -62,6 +62,7 @@ function Flight(map, svg) {
   this._animRequested = false;
   this._currentLine = []
   this._stations = {}
+  this.pointArr = []
 
   /**
    * 飞机初始化
@@ -71,11 +72,11 @@ function Flight(map, svg) {
    */
   // this.init = function (a, b) {
   // 2019-06-24
-  this.init = function (latlngs, durations, options) {
+  this.init = function (latlngs, durations, options, planeInfo) {
     this._latlngs = latlngs.map(function(e, index) {
       return L.latLng(e);
     });
-
+    this.planeInfo = planeInfo;
     if (durations instanceof Array) {
       this._durations = durations;
     } else {
@@ -105,53 +106,28 @@ function Flight(map, svg) {
     var self = this
     this._latlngs.map(function (point) {
       var point_px = self.map.latLngToLayerPoint([point.lat, point.lng])
-      self.group.append("circle").attr("fill", self.beginColor).attr("cx", point_px.x).attr("cy", point_px.y).attr("r", self.radius);
+      var point = self.group.append("circle").attr("fill", self.beginColor).attr("cx", point_px.x).attr("cy", point_px.y).attr("r", self.radius);
+      self.pointArr.push(point)
     })
     
     this.load_plane()
     if(this._autostart) {
       this.start()
+      // 缩放结束重新定位
       this.map.on("zoomend", function () {
-        // self._latlngs.map(function (point) {
-        //   var point_px = self.map.latLngToLayerPoint([point.lat, point.lng])
-        //   self.group.append("circle").attr("fill", self.beginColor).attr("cx", point_px.x).attr("cy", point_px.y).attr("r", self.radius);
-        // })
-        if(!self.isStarted) {
-          var plane_px = self.map.latLngToLayerPoint([self._latlngs[0].lat, self._latlngs[0].lng]) // 把地理坐标转化为像素坐标
-          self.pos_plane = plane_px
-          self.plane.attr("transform", function () {
-              var a = "translate(" + plane_px.x + "," + plane_px.y + ")", j = "scale(0.4)";
-              return a + j;
-          })
-        } else if (self.isEnded) {
-          var plane_px = self.map.latLngToLayerPoint([self._latlngs[self._latlngs.length-1].lat, self._latlngs[self._latlngs.length-1].lng]) // 把地理坐标转化为像素坐标
-          self.pos_plane = plane_px
-          self.plane.attr("transform", function () {
-              var a = "translate(" + plane_px.x + "," + plane_px.y + ")", j = "scale(0.4)";
-              return a + j;
-          })
+        self._latlngs.forEach((item,i) => {
+          var point_px = self.map.latLngToLayerPoint([item.lat, item.lng])
+          self.pointArr[i].attr("cx", point_px.x).attr("cy", point_px.y)
+        });
+        if(!self.isStarted()) {
+          self.pos_plane = self.map.latLngToLayerPoint([self._latlngs[0].lat, self._latlngs[0].lng]) // 把地理坐标转化为像素坐标
+          self.setPlanePosition(true)
+        } else if (self.isEnded()) {
+          self.pos_plane = self.map.latLngToLayerPoint([self._latlngs[self._latlngs.length-1].lat, self._latlngs[self._latlngs.length-1].lng]) // 把地理坐标转化为像素坐标
+          self.setPlanePosition()
         }
       })
     }
-  }
-  /**
-   * 获取航线飞行的区域
-   *
-   * @param {*} bp_px // 起点的像素坐标
-   * @param {*} mp_px // 中转点的像素坐标
-   * @param {*} pos_plane // 飞机位置的像素坐标
-   * @returns [矩形横坐标，矩形纵坐标，矩形宽度，矩形高度]
-   */
-  this.getClipRect = function (bp_px, mp_px, pos_plane) {
-      var minX, minY, maxX, maxY, h, i;
-      minX = Math.min(bp_px.x, pos_plane.x); // 起点横坐标和飞机横坐标求最小值
-      minY = Math.min(bp_px.y, pos_plane.y); // 起点纵坐标和飞机纵坐标求最小值
-      maxX = Math.max(bp_px.x, pos_plane.x);  // 起点横坐标和飞机横坐标求最大值
-      maxY = Math.max(bp_px.y, pos_plane.y);  // 起点纵坐标和飞机纵坐标求最大值
-      // 终点横坐标 - 起点横坐标的绝对值 是否大于等于  终点纵坐标 - 起点纵坐标的绝对值
-      Math.abs(this.ep_px.x - this.bp_px.x) >= Math.abs(this.ep_px.y - this.bp_px.y) 
-      ? (h = 0, i = 800) : (h = 800, i = 0);
-      return [minX - h, minY - i, maxX - minX + 2 * h, maxY - minY + 2 * i]
   }
   /**
    * 绘制飞机
@@ -159,12 +135,15 @@ function Flight(map, svg) {
    */
   this.load_plane = function () {
       var self = this
-      this.plane = this.group.append("g").attr("id", "plane").attr("transform", function () {
+
+      this.plane = this.group.append("g").attr("id", "plane").attr('width',this.w_plane).attr('height',this.h_plane).attr("transform", function () {
         
         var a = "translate(" + self.pos_plane.x + "," + self.pos_plane.y + ")", j = "scale(0.4)";
         return a + j;
-      }).attr("fill", this.planeColor), this.plane.append("path").attr("d", this.d_plane)
-      d3.select("#plane").data(planeData) // 绑定事件
+      }).attr("fill", this.planeColor);
+      this.plane.append("path").attr("d", this.d_plane)
+      this.setPlanePosition(true)
+      d3.select("#plane").data(self.planeInfo) // 绑定事件
       .on("mouseover", mouseOver).on("mouseout", mouseOut);
       d3.select("#plane").on("click", function () {
         if(self.isPaused()) {
@@ -174,68 +153,15 @@ function Flight(map, svg) {
         }
       });
   }
-  /**
-   *
-   * 渲染
-   */
-  this.render = function () {
-      var a = this.getClipRect(this.bp_px, this.mp_px, this.pos_plane);
-      this.clipPath_rect.attr("x", a[0]).attr("y", a[1]).attr("width", a[2]).attr("height", a[3]);
-      // 航线数组
-      this.road_points = [
-        [this.bp_px.x, this.bp_px.y],
-        [this.ep_px.x, this.ep_px.y]
-      ]
-      this.road.datum(this.road_points).attr("d", d3.line().curve(d3.curveBundle.beta(.5)));
-
-
-      var b = this.w_plane, 
-        c = this.h_plane, 
-        d = this.pos_plane.x, 
-        e = this.pos_plane.y, 
-        f = this.rot, 
-        g = this.spos, 
-        h = d3.scaleLinear().domain([0, .9, 1]).range([.3, .5, 0]);
-        this.plane.attr("transform", function () {
-          // var a = "translate(" + d + "," + e + ")", i = "rotate(" + f + ")", j = "scale(" + h(g) + ")", k = "translate(" + b / -2 + "," + c / -2 + ")";
-          var a = "translate(" + d + "," + e + ")", i = "rotate(" + f + ")", j = "scale(0.4)", k = "translate(" + b / -2 + "," + c / -2 + ")";
-          return a + i + j + k
-      })
-  }
-  /**
-   * 更新飞机状态
-   *
-   */
-  this.update = function () {
-      this.curZoom = this.map.getZoom();
-      this.radius = 6 * this.curZoom / 3;
-      this.bp_px = this.map.latLngToLayerPoint([this.beginPoint.lat, this.beginPoint.lng]);
-      this.ep_px = this.map.latLngToLayerPoint([this.endPoint.lat, this.endPoint.lng]);
-      this.mp_px = this.map.latLngToLayerPoint([this.midPoint.lat, this.midPoint.lng]);
-
-      this.road_points = [
-        [this.bp_px.x, this.bp_px.y],
-        // [this.mp_px.x, this.mp_px.y],
-        [this.ep_px.x, this.ep_px.y]
-      ]
-      this.road.datum(this.road_points).attr("d", d3.line().curve(d3.curveBundle.beta(.5)));
-
-      this.spos = this.spos <= 1 ? this.spos + .01 : this.spos;
-      var a = this.road.node().getTotalLength(), 
-          b = this.road.node().getPointAtLength(this.spos * a);
-
-      this.pos_plane.x = b.x; // 更新飞机位置
-      this.pos_plane.y = b.y;
-
-      var c = this.spos <= 1 ? this.spos + .01 : this.spos, 
-          d = this.road.node().getPointAtLength(c * a), 
-          e = Victor(d.x - this.pos_plane.x, d.y - this.pos_plane.y).angleDeg();
-      this.rot = this.isEnd() ? 0 : e + 45
-      if(this.isEnd()) {
-        this._currentIndex ++;
-        clearInterval(planeInterval)
-        console.log("_currentIndex",this._currentIndex);
-      }
+  this.setPlanePosition = function (flag) {
+    var width = 64*0.4 / 2
+    var height = 64*0.4 / 2
+    var translateX = this.pos_plane.x - width
+    var translateY = this.pos_plane.y - height
+    this.plane.attr("transform", function () {
+      var a = "translate(" + translateX + "," + translateY + ")", j = "scale(0.4)";
+      return a + j;
+    })
   }
   this.setPlaneColor = function (a) {
       this.planeColor = a;
@@ -261,10 +187,10 @@ function Flight(map, svg) {
    *
    */
   this.delete = function () {
-      // this.bp_circle.transition().duration(500).style("opacity", "0.0").attr("r", 0).remove();
-      // this.road.transition().duration(1e3).style("opacity", "0.0").attr("stroke-width", 0).remove();
-      // this.ep_circle.transition().duration(1500).style("opacity", "0.0").attr("r", 0).remove();
-      // this.group.transition().delay(1500).style("opacity", "0.0").remove()
+      this.bp_circle.transition().duration(500).style("opacity", "0.0").attr("r", 0).remove();
+      this.road.transition().duration(1e3).style("opacity", "0.0").attr("stroke-width", 0).remove();
+      this.ep_circle.transition().duration(1500).style("opacity", "0.0").attr("r", 0).remove();
+      this.group.transition().delay(1500).style("opacity", "0.0").remove()
   }
   // 2019-06-25
   this.isRunning =function () {
@@ -354,20 +280,8 @@ function Flight(map, svg) {
             this._currentLine[1],
             this._currentDuration,
             elapsedTime);
-            var plane_px = this.map.latLngToLayerPoint([p.lat, p.lng]) // 把地理坐标转化为像素坐标
-            this.pos_plane = plane_px
-        // console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
-        // console.log("_currentDuration",this._currentDuration);
-        // console.log("_currentLine",this._currentLine[1]);
-        // console.log("p",p);
-        // console.log("plane_px",plane_px);
-        // console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
-        this.plane.attr("transform", function () {
-          // var a = "translate(" + d + "," + e + ")", i = "rotate(" + f + ")", j = "scale(" + h(g) + ")", k = "translate(" + b / -2 + "," + c / -2 + ")";
-          var a = "translate(" + plane_px.x + "," + plane_px.y + ")", j = "scale(0.4)";
-          return a + j;
-      })
-        // this.setLatLng(p);
+        this.pos_plane = this.map.latLngToLayerPoint([p.lat, p.lng]) // 把地理坐标转化为像素坐标
+        this.setPlanePosition()
     }
 
     if (! noRequestAnim) {
@@ -499,29 +413,22 @@ function Flight(map, svg) {
 
 
 function tooltipHtml(d){	/* function to create html content string in tooltip div. */
-return "<h4>"+d.name+"</h4><table>"+
-  "<tr><td>id</td><td>"+(d.id)+"</td></tr>"+
-  "<tr><td>count</td><td>"+(d.count)+"</td></tr>"+
-  "<tr><td>xinghao</td><td>"+(d.xinghao)+"</td></tr>"+
-  "</table>";
+  return "<h4>"+d.planeName+"</h4><table>"+
+    "<tr><td>人数</td><td>"+(d.peopleCount)+"</td></tr>"+
+    "<tr><td>飞行时间</td><td>"+(d.flightTime)+"</td></tr>"+
+    "</table>";
 }
 
 function mouseOver(d){
-d3.select("#tooltip").transition().duration(200).style("opacity", .9);
-d3.select("#tooltip").html(tooltipHtml(d))
-  .style("left", (d3.event.pageX) + "px")
-  .style("top", (d3.event.pageY - 28) + "px");
+
+  
+  d3.select("#tooltip").transition().duration(200).style("opacity", .9);
+  d3.select("#tooltip").html(tooltipHtml(d))
+    .style("left", (d3.event.pageX) + "px")
+    .style("top", (d3.event.pageY - 28) + "px");
 }
 
 function mouseOut(){
-d3.select("#tooltip").transition().duration(500).style("opacity", 0);
+  d3.select("#tooltip").transition().duration(500).style("opacity", 0);
 }
 
-var planeData = [
-{
-  id: 1,
-  name: '波音747',
-  xinghao: 3124,
-  count: 65466
-}
-]

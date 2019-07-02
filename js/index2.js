@@ -73,28 +73,7 @@ d3.json("data/geojson/world.json")
     }).bindPopup(function (layer) {
       return layer.feature.properties.NAME;
     }).addTo(mymap);
-    var svg = d3.select("#mapDiv").select("svg");
-    
-    // mymap.on("zoomend", FlightState)
-
-    // flightArr.push(new Flight(mymap, svg));
-
-    // var plane1 = new Flight(mymap, svg);
-    // console.log(plane1)
-    // flightArr[flightArr.length - 1].setPlaneColor('#FFCCCC')
-    // flightArr[flightArr.length - 1].setRoadColor('#85FFFF')
-    // flightArr[flightArr.length - 1].setBeginColor('#62DFDF')
-    // flightArr[flightArr.length - 1].setEndColor('#62DFDF')
-    // flightArr[flightArr.length - 1].init({
-    //   lat: 30.655822,
-    //   lng: 104.081534 
-    // }, {
-    //   lat: 39.92,
-    //   lng: 116.46
-    // })
-    // planeInterval = setInterval(function () {
-    //   FlightState()
-    // }, 100)            
+    var svg = d3.select("#mapDiv").select("svg");        
 
     plane1 = new Flight(mymap, svg);
 
@@ -110,7 +89,12 @@ d3.json("data/geojson/world.json")
       endColor: '#62DFDF',
       autostart: true
     }
-    plane1.init(latlngs,10000,options)
+    var planeInfo = [{
+      planeName: '马航M370',
+      peopleCount: '200',
+      flightTime: '3h'
+    }]
+    plane1.init(latlngs,10000,options,planeInfo)
   })
 
 // L.marker([30.6268660000, 104.1528940000]).addTo(mymap).bindTooltip("my tooltip text").openTooltip();
