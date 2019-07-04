@@ -142,6 +142,7 @@ function Flight(map, svg) {
         return a + j;
       }).attr("fill", this.planeColor);
       this.plane.append("path").attr("d", this.d_plane)
+      this._loadLine(0);
       this.setPlanePosition(true)
       d3.select("#plane").data(self.planeInfo) // 绑定事件
       .on("mouseover", mouseOver).on("mouseout", mouseOut);
@@ -154,13 +155,33 @@ function Flight(map, svg) {
       });
   }
   this.setPlanePosition = function (flag) {
-    var width = 64*0.4 / 2
-    var height = 64*0.4 / 2
+    var width = this.plane.node().getBBox().width * this.curZoom /10 / 2
+    var height = this.plane.node().getBBox().width * this.curZoom /10 / 2
     var translateX = this.pos_plane.x - width
     var translateY = this.pos_plane.y - height
+    if(this._currentLine.length !==0) {
+      var origin = this.map.latLngToLayerPoint([this._currentLine[0].lat, this._currentLine[0].lng])
+      var end = this.map.latLngToLayerPoint([this._currentLine[1].lat, this._currentLine[1].lng])
+      var x = end.x - origin.x;
+      var y = end.y - origin.y;
+    }
+    
+    var angle = Victor(x, y).angleDeg(); // 生成角度
+
+    var degree= Math.atan2(x,y) / (Math.PI/180)
+    console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+    console.log("translateX",translateX);
+    console.log("translateY",translateY);
+    console.log("angle",angle);
+    console.log("degree",degree);
+    console.log("origin",origin);
+    console.log("x",x);
+    console.log("y",y);
+    console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+    var rot = this._currentIndex == 0 ? degree - 45 : degree + 90
     this.plane.attr("transform", function () {
-      var a = "translate(" + translateX + "," + translateY + ")", j = "scale(0.4)";
-      return a + j;
+      var a = "translate(" + translateX + "," + translateY + ")", b = "rotate(" + (0) + ")", j = "scale(0.4)";
+      return a + b + j;
     })
   }
   this.setPlaneColor = function (a) {
