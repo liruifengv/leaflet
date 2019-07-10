@@ -21,7 +21,7 @@
     maxZoom: 18
   })
   L.control.zoom({
-    position: "bottomright",
+    position: "topleft",
     zoomInTitle: "放大",
     zoomOutTitle: "缩小"
   }).addTo(mymap)
@@ -29,7 +29,6 @@
     metric: !0,
     imperial: !1
   }).addTo(mymap);
-
   var flightArr = []; // 存放飞机的数组
   // function FlightState() { // 更新飞机的状态
   //   for (var a = flightArr.length - 1; a >= 0; a--) {
@@ -67,8 +66,6 @@
         filter: ((feature) => {
           return feature.properties.NAME !== 'China' && feature.properties.NAME !== 'Antarctica' && feature.properties.NAME !== 'Taiwan'
         })
-      }).bindPopup(function (layer) {
-        return layer.feature.properties.NAME;
       }).addTo(mymap);
       var svg = d3.select("#mapDiv").select("svg");
       
@@ -88,8 +85,98 @@
         flightTime: '3h'
       }]
       var plane =  new Flight(mymap, svg)
-      plane.init(latlngs, options, planeInfo)
+      plane.init(latlngs, options, planeInfo);
 
+
+      // var drawnItems = new L.FeatureGroup().addTo(mymap),
+      var editActions = [
+        LeafletToolbar.EditAction.Popup.Edit,
+        LeafletToolbar.EditAction.Popup.Delete,
+        // LeafletToolbar.ToolbarAction.extendOptions({
+          // toolbarIcon: {
+          //   className: 'leaflet-color-picker',
+          //   html: '<span class="fa fa-eyedropper"></span>'
+          // },
+          // subToolbar: new LeafletToolbar({
+          //   actions: [
+          //     L.ColorPicker.extendOptions({
+          //       color: '#db1d0f'
+          //     }),
+          //     L.ColorPicker.extendOptions({
+          //       color: '#025100'
+          //     }),
+          //     L.ColorPicker.extendOptions({
+          //       color: '#ffff00'
+          //     }),
+          //     L.ColorPicker.extendOptions({
+          //       color: '#0000ff'
+          //     })
+          //   ]
+          // })
+        // })
+      ];
+      // new LeafletToolbar.DrawToolbar({
+      //   position: 'topleft',
+      // }).addTo(mymap);
+
+
+      const drawnItems = new L.FeatureGroup();
+      mymap.addLayer(drawnItems);
+
+      const drawControl = new L.Control.Draw({
+        position: 'topright',
+        draw: {
+          polyline: {
+            metric: true,
+          },
+          polygon: {
+            allowIntersection: true,
+            showArea: true,
+            showLength: true,
+            metric: true,
+
+            drawError: {
+              color: '#ff0000',
+              timeout: 1000,
+            },
+            shapeOptions: {
+              color: '#ff0000',
+            },
+          },
+          circle: {
+            shapeOptions: {
+              color: '#ff0000',
+            },
+          },
+          marker: true,
+          circlemarker: false
+        },
+        // edit: {
+        //   featureGroup: drawnItems,
+        //   remove: true,
+        //   buffer: {
+        //     replacePolylines: false,
+        //     separateBuffer: false,
+        //   },
+        // },
+      });
+      mymap.addControl(drawControl);
+
+      mymap.on('draw:created', function (evt) {
+        console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+        console.log("evt",evt);
+        console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+        var type = evt.layerType,
+          layer = evt.layer;
+
+        drawnItems.addLayer(layer);
+
+        layer.on('click', function (event) {
+          new LeafletToolbar.EditToolbar.Popup(event.latlng, {
+            actions: editActions
+          }).addTo(mymap, layer);
+        });
+      });
       // mymap.on("zoomend", FlightState)
 
       // flightArr.push(new Flight(mymap, svg));
@@ -137,11 +224,9 @@
               var layer = e.target;
               layer.setStyle(style)
             }),
-            click: ((e) => {})
+            // click: ((e) => {})
           })
         })
-      }).bindPopup(function (layer) {
-        return layer.feature.properties.name;
       }).addTo(mymap);
     })
 

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<!-- saved from url=(0072)https://justinmanley.github.io/leaflet-draw-toolbar/examples/popup.html# -->
+<html>
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <link rel="stylesheet" type="text/css" href="./popup_files/leaflet.css">
+  <link rel="stylesheet" type="text/css" href="./popup_files/leaflet.draw.css">
+  <link rel="stylesheet" type="text/css" href="./popup_files/leaflet.toolbar.css">
+  <link rel="stylesheet" href="./popup_files/bootstrap.min.css">
+  <link rel="stylesheet" href="./popup_files/bootstrap-theme.min.css">
+  <link rel="stylesheet" href="./popup_files/font-awesome.min.css">
+  <link rel="stylesheet" href="./popup_files/leaflet.draw-toolbar.css">
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+  <script src="./popup_files/bootstrap.min.js"></script>
+  <script src="./popup_files/leaflet-src.js"></script>
+  <script src="./popup_files/leaflet.toolbar-src.js"></script>
+  <script src="./popup_files/leaflet.draw-src.js"></script>
+  <script src="./popup_files/leaflet.draw-toolbar.js"></script>
+  <script src="./popup_files/ColorPicker.js"></script>
+  <style>
+    html,
+    body,
+    #map {
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+</head>
+
+<body>
+  <div id="map"></div>
+  <style>
+    .leaflet-toolbar-icon .fa {
+      color: #000;
+    }
+
+    .leaflet-color-swatch {
+      background-color: #fff;
+    }
+  </style>
+  <script>
+    var map = L.map('map').setView([41.7896, -87.5996], 15),
+      drawnItems = new L.FeatureGroup().addTo(map),
+      editActions = [
+        LeafletToolbar.EditAction.Popup.Edit,
+        LeafletToolbar.EditAction.Popup.Delete,
+        // LeafletToolbar.ToolbarAction.extendOptions({
+        //   toolbarIcon: {
+        //     className: 'leaflet-color-picker',
+        //     html: '<span class="fa fa-eyedropper"></span>'
+        //   },
+        //   subToolbar: new LeafletToolbar({
+        //     actions: [
+        //       L.ColorPicker.extendOptions({
+        //         color: '#db1d0f'
+        //       }),
+        //       L.ColorPicker.extendOptions({
+        //         color: '#025100'
+        //       }),
+        //       L.ColorPicker.extendOptions({
+        //         color: '#ffff00'
+        //       }),
+        //       L.ColorPicker.extendOptions({
+        //         color: '#0000ff'
+        //       })
+        //     ]
+        //   })
+        // })
+      ];
+
+    L.tileLayer("http://tile.stamen.com/terrain/{z}/{x}/{y}.jpg", {
+      attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, under <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a>. Data by <a href="http://openstreetmap.org">OpenStreetMap</a>, under <a href="http://creativecommons.org/licenses/by-sa/3.0">CC BY SA</a>.'
+    }).addTo(map);
+
+
+      new LeafletToolbar.DrawToolbar({
+        position: 'topleft',
+      }).addTo(map);
+      L.drawLocal = {
+        // format: {
+        // 	numeric: {
+        // 		delimiters: {
+        // 			thousands: ',',
+        // 			decimal: '.'
+        // 		}
+        // 	}
+        // },
+        draw: {
+          toolbar: {
+            // #TODO: this should be reorganized where actions are nested in actions
+            // ex: actions.undo  or actions.cancel
+            actions: {
+              title: 'Cancel drawing',
+              text: 'Cancel'
+            },
+            finish: {
+              title: 'Finish drawing',
+              text: 'Finish'
+            },
+            undo: {
+              title: 'Delete last point drawn',
+              text: 'Delete last point'
+            },
+            buttons: {
+              polyline: 'Draw a polyline',
+              polygon: 'Draw a polygon',
+              rectangle: 'Draw a rectangle',
+              circle: 'Draw a circle',
+              marker: 'Draw a marker',
+              circlemarker: 'Draw a circlemarker'
+            }
+          },
+          handlers: {
+            circle: {
+              tooltip: {
+                start: 'Click and drag to draw circle.'
+              },
+              radius: 'Radius'
+            },
+            circlemarker: {
+              tooltip: {
+                start: 'Click map to place circle marker.'
+              }
+            },
+            marker: {
+              tooltip: {
+                start: 'Click map to place marker.'
+              }
+            },
+            polygon: {
+              tooltip: {
+                start: 'Click to start drawing shape.',
+                cont: 'Click to continue drawing shape.',
+                end: 'Click first point to close this shape.'
+              }
+            },
+            polyline: {
+              error: '<strong>Error:</strong> shape edges cannot cross!',
+              tooltip: {
+                start: 'Click to start drawing line.',
+                cont: 'Click to continue drawing line.',
+                end: 'Click last point to finish line.'
+              }
+            },
+            rectangle: {
+              tooltip: {
+                start: 'Click and drag to draw rectangle.'
+              }
+            },
+            simpleshape: {
+              tooltip: {
+                end: 'Release mouse to finish drawing.'
+              }
+            }
+          }
+        },
+        edit: {
+          toolbar: {
+            actions: {
+              save: {
+                title: 'Save changes',
+                text: 'Save'
+              },
+              cancel: {
+                title: 'Cancel editing, discards all changes',
+                text: 'Cancel'
+              },
+              clearAll: {
+                title: 'Clear all layers',
+                text: 'Clear All'
+              }
+            },
+            buttons: {
+              edit: 'Edit layers',
+              editDisabled: 'No layers to edit',
+              remove: 'Delete layers',
+              removeDisabled: 'No layers to delete'
+            }
+          },
+          handlers: {
+            edit: {
+              tooltip: {
+                text: 'Drag handles or markers to edit features.',
+                subtext: 'Click cancel to undo changes.'
+              }
+            },
+            remove: {
+              tooltip: {
+                text: 'Click on a feature to remove.'
+              }
+            }
+          }
+        }
+      };
+          map.on('draw:created', function (evt) {
+            console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+            console.log("evt",evt);
+            console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+            var type = evt.layerType,
+              layer = evt.layer;
+
+            drawnItems.addLayer(layer);
+
+            layer.on('click', function (event) {
+              new LeafletToolbar.EditToolbar.Popup(event.latlng, {
+                actions: editActions
+              }).addTo(map, layer);
+            });
+          });
+  </script>
+
+
+</body>
+
+</html>
