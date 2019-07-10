@@ -73,44 +73,43 @@ d3.json("data/geojson/world.json")
     }).bindPopup(function (layer) {
       return layer.feature.properties.NAME;
     }).addTo(mymap);
+
     var svg = d3.select("#mapDiv").select("svg");        
 
     plane1 = new Flight(mymap, svg);
 
-    // var latlngs = [
-    //   [30.655822, 104.081534],
-    //   [31.2, 121.4],
-    //   [39.92, 116.46]
-    // ];
-    // var latlngs = [
-    //   [31.2, 121.4],
-    //   [30.655822, 104.081534],
-    //   [39.92, 116.46]
-    // ];
-    // var latlngs = [
-    //   [39.92, 116.46],
-    //   [31.2, 121.4],
-    //   [30.655822, 104.081534],
-    // ];
-    // var latlngs = [
-    //   [39.92, 116.46],
-    //   [30.655822, 104.081534],
-    //   [31.2, 121.4],
-    // ];
     var latlngs = [
-      [31.2, 121.4],
-      [39.92, 116.46],
       [30.655822, 104.081534],
+      [31.2, 121.4],
+      [39.92, 116.46]
     ];
+    // var latlngs = [
+    //   [31.2, 121.4],
+    //   [30.655822, 104.081534],
+    //   [39.92, 116.46]
+    // ];
+    // var latlngs = [
+    //   [39.92, 116.46],
+    //   [31.2, 121.4],
+    //   [30.655822, 104.081534],
+    //   [43.5883,87.9236]
+    // ];
+    // var latlngs = [
+    //   [39.92, 116.46],
+    //   [30.655822, 104.081534],
+    //   [31.2, 121.4],
+    // ];
+    // var latlngs = [
+    //   [31.2, 121.4],
+    //   [39.92, 116.46],
+    //   [30.655822, 104.081534],
+    // ];
 
     // var latlngs = [
     //   [43.5883,87.9236],
     //   [28.2568, 113.0823],
     //   [39.4189, 117.4219],
     // ];
-
-
-
 
     var options = {
       planeColor: '#FFCCCC',
@@ -124,9 +123,25 @@ d3.json("data/geojson/world.json")
       peopleCount: '200',
       flightTime: '3h'
     }]
-    plane1.init(latlngs,10000,options,planeInfo)
+    plane1.init(latlngs,5000,options,planeInfo)
   })
 
+  document.querySelector('.pause-btn').onclick = function (e) {
+    console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+    console.log("pause");
+    console.log("e",e);
+    console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+    if(!plane1.isStarted()) {
+      plane1.start()
+      e.target.innerHTML = '暂停'
+    } else if(plane1.isPaused()) {
+      e.target.innerHTML = '暂停'
+      plane1.resume()
+    } else if(plane1.isRunning()) {
+      e.target.innerHTML = '继续'
+      plane1.pause()
+    }
+  }
 // L.marker([30.6268660000, 104.1528940000]).addTo(mymap).bindTooltip("my tooltip text").openTooltip();
 // L.marker([31.2, 121.4]).addTo(mymap).bindPopup("<b>上海</b>").openPopup();
 // L.marker([39.92, 116.46]).addTo(mymap).bindPopup("<b>北京</b>").openPopup();

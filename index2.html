@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="./css/normalize.css" />
   <link rel="stylesheet" href="./leaflet/leaflet.css" />
   <link rel="stylesheet" href="./css/plane.css" />
+  <link rel="stylesheet" href="./css/leaflet.toolbar.css" />
   <style>
     #mapDiv {
       height: 100vh;
@@ -66,6 +67,33 @@
       pointer-events:visiblePainted !important;
       cursor: move;
     }
+    .pause-btn {
+      position: fixed;
+      top: 50px;
+      right: 50px;
+      padding: 12px 20px;
+      color: #fff;
+      background-color: #1890ff;
+      border-color: #1890ff;
+      display: inline-block;
+      text-align: center;
+      border: 1px solid #1890ff;
+      font-size: 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      line-height: 1;
+      white-space: nowrap;
+      outline: none;
+      box-sizing: border-box;
+      z-index: 1000;
+      display: none;
+    }
+    .pause-btn:hover,
+    .pause-btn:focus {
+      color: #fff;
+      background-color: #40a9ff;
+      border-color: #1890ff;
+    }
   </style>
 </head>
 <body>
@@ -73,13 +101,16 @@
   <div id="mapDiv">
 
   </div>
+  <button class="pause-btn">开始</button>
 
-<script src="https://d3js.org/d3.v5.min.js"></script>
+<!-- <script src="https://d3js.org/d3.v5.min.js"></script> -->
+<script src="./js/d3.min.js" charset="utf-8"></script>
 <script src="./js/topojson.js" charset="utf-8"></script>
 <script src="./leaflet/leaflet.js" charset="utf-8"></script>
 <script src="./js/victor.min.js" charset="utf-8"></script>
 <script src="./js/plane.js" charset="utf-8"></script>
 <script src="./js/index2.js" charset="utf-8"></script>
+<script src="./js/leaflet.toolbar.js" charset="utf-8"></script>
 
 </body>
 </html>
