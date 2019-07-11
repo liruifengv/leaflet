@@ -40,6 +40,9 @@
   // }
   // 用d3读取地图geojson数据
   // d3.json("data/world_map.json")
+  console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+  console.log("mymap",mymap);
+  console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
   d3.json("data/geojson/world.json")
     .then((data) => {
       // var topoData = topojson.feature(data, data.objects.countries); // 转化为topojson格式
@@ -140,7 +143,7 @@
               timeout: 1000,
             },
             shapeOptions: {
-              color: '#ff0000',
+              // color: '#ff0000',
             },
           },
           circle: {
@@ -177,6 +180,7 @@
           }).addTo(mymap, layer);
         });
       });
+      L.control.mousePosition().addTo(mymap);
       // mymap.on("zoomend", FlightState)
 
       // flightArr.push(new Flight(mymap, svg));
