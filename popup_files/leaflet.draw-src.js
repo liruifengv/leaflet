@@ -3857,7 +3857,6 @@ L.Draw.Tooltip = L.Class.extend({
 	updatePosition: function (latlng) {
 		var pos = this._map.latLngToLayerPoint(latlng),
 			tooltipContainer = this._container;
-
 		if (this._container) {
 			if (this._visible) {
 				tooltipContainer.style.visibility = 'inherit';

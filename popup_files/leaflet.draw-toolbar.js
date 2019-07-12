@@ -318,7 +318,10 @@ LeafletToolbar.EditToolbar.Popup = LeafletToolbar.Popup.extend({
 	},
 
 	onAdd: function (map) {
-		var shape = this._arguments[1];
+    var shape = this._arguments[1];
+    console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
+    console.log("shape",shape);
+    console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
 
 		if (shape instanceof L.Marker) {
 			/* Adjust the toolbar position so that it doesn't cover the marker. */
