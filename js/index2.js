@@ -44,7 +44,7 @@ function FlightState() { // 更新飞机的状态
 }
 // 用d3读取地图geojson数据
 // d3.json("data/world_map.json")
-d3.json("data/geojson/world.json")
+d3.json("all.json")
   .then((data) => {
     // var topoData = topojson.feature(data, data.objects.countries); // 转化为topojson格式
     // console.log("■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■■");
@@ -66,9 +66,6 @@ d3.json("data/geojson/world.json")
 
           })
         })
-      }),
-      filter: ((feature) => {
-        return feature.properties.NAME !== 'China' && feature.properties.NAME !== 'Antarctica' && feature.properties.NAME !== 'Taiwan'
       })
     }).bindPopup(function (layer) {
       return layer.feature.properties.NAME;
@@ -145,31 +142,31 @@ d3.json("data/geojson/world.json")
 // L.marker([30.6268660000, 104.1528940000]).addTo(mymap).bindTooltip("my tooltip text").openTooltip();
 // L.marker([31.2, 121.4]).addTo(mymap).bindPopup("<b>上海</b>").openPopup();
 // L.marker([39.92, 116.46]).addTo(mymap).bindPopup("<b>北京</b>").openPopup();
-d3.json("data/geojson/china/china.json")
-  .then((data) => {
-    L.geoJSON(data, {
-      style: {
-        color: "#586a77",
-        opacity: 1,
-        weight: 1.5,
-        fillColor: "#323c48",
-        fillOpacity: .8
-      },
-      onEachFeature: ((feature, layer) => {
-        layer.on({
-          mouseover: ((e) => {
-            var layer = e.target;
-            layer.setStyle(hoverStyle)
-          }),
-          mouseout: ((e) => {
-            var layer = e.target;
-            layer.setStyle(style)
-          }),
-          click: ((e) => {})
-        })
-      })
-    }).bindPopup(function (layer) {
-      return layer.feature.properties.name;
-    }).addTo(mymap);
-  })
+// d3.json("data/geojson/china/china.json")
+//   .then((data) => {
+//     L.geoJSON(data, {
+//       style: {
+//         color: "#586a77",
+//         opacity: 1,
+//         weight: 1.5,
+//         fillColor: "#323c48",
+//         fillOpacity: .8
+//       },
+//       onEachFeature: ((feature, layer) => {
+//         layer.on({
+//           mouseover: ((e) => {
+//             var layer = e.target;
+//             layer.setStyle(hoverStyle)
+//           }),
+//           mouseout: ((e) => {
+//             var layer = e.target;
+//             layer.setStyle(style)
+//           }),
+//           click: ((e) => {})
+//         })
+//       })
+//     }).bindPopup(function (layer) {
+//       return layer.feature.properties.name;
+//     }).addTo(mymap);
+//   })
 
